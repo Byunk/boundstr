@@ -9,3 +9,4 @@ repository = "https://github.com/Byunk/boundstr"
 readme = "README.md"
 
 [dependencies]
+str_indices = "0.4.4"
