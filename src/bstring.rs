@@ -66,6 +66,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     /// Returns [`FromUtf16Error`] if `v` is not valid UTF-16 or the string
     /// exceeds `MAX` in encoding `E`.
     pub fn from_utf16(v: &[u16]) -> Result<Self, FromUtf16Error<E>> {
+        // TODO: Check the bounds before decoding the whole input.
         let s = String::from_utf16(v)?;
         Ok(Self::from_string(s)?)
     }
