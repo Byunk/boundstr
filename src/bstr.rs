@@ -132,7 +132,7 @@ mod serde_impl {
     use std::fmt;
     use std::marker::PhantomData;
 
-    use serde_core::de::{self, Deserialize, Deserializer, Visitor};
+    use serde_core::de::{self, Deserialize, Deserializer, Unexpected, Visitor};
     use serde_core::ser::{Serialize, Serializer};
 
     use super::BStr;
@@ -155,6 +155,13 @@ mod serde_impl {
 
         fn visit_borrowed_str<Err: de::Error>(self, v: &'de str) -> Result<Self::Value, Err> {
             BStr::from_str(v).map_err(Err::custom)
+        }
+
+        fn visit_borrowed_bytes<Err: de::Error>(self, v: &'de [u8]) -> Result<Self::Value, Err> {
+            match str::from_utf8(v) {
+                Ok(s) => self.visit_borrowed_str(s),
+                Err(_) => Err(Err::invalid_value(Unexpected::Bytes(v), &self)),
+            }
         }
     }
 
