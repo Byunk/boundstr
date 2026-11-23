@@ -462,7 +462,7 @@ impl<const MAX: usize, E: Encoding> TryFrom<&str> for BString<MAX, E> {
     type Error = LengthExceeded<E>;
 
     fn try_from(s: &str) -> Result<Self, LengthExceeded<E>> {
-        Self::from_string(s.to_owned())
+        BStr::from_str(s).map(ToOwned::to_owned)
     }
 }
 
@@ -470,7 +470,7 @@ impl<const MAX: usize, E: Encoding> FromStr for BString<MAX, E> {
     type Err = LengthExceeded<E>;
 
     fn from_str(s: &str) -> Result<Self, LengthExceeded<E>> {
-        Self::from_string(s.to_owned())
+        BStr::from_str(s).map(ToOwned::to_owned)
     }
 }
 
