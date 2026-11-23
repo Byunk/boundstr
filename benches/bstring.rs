@@ -213,5 +213,49 @@ fn insert(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, push, pop, remove, insert);
+fn retain(c: &mut Criterion) {
+    /// Keeps every other character.
+    fn alternate() -> impl FnMut(char) -> bool {
+        let mut keep = false;
+        move |ch| {
+            black_box(ch);
+            keep = !keep;
+            keep
+        }
+    }
+
+    for (name, chars) in inputs() {
+        let full: String = chars.iter().collect();
+        let mut group = c.benchmark_group(format!("retain/{name}"));
+        group.throughput(Throughput::Elements(CHARS as u64));
+
+        group.bench_function("String::retain", |b| {
+            b.iter_batched_ref(
+                || full.clone(),
+                |s| s.retain(alternate()),
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf8>::retain", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf8>::try_from(full.as_str()).unwrap(),
+                |s| s.retain(alternate()),
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf16>::retain", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf16>::try_from(full.as_str()).unwrap(),
+                |s| s.retain(alternate()),
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.finish();
+    }
+}
+
+criterion_group!(benches, push, pop, remove, insert, retain);
 criterion_main!(benches);
