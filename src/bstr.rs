@@ -21,8 +21,6 @@ impl<const MAX: usize, E: Encoding> BStr<MAX, E> {
 
     /// Converts a `&str` to a [`BStr`].
     ///
-    /// Takes `O(n)` time complexity.
-    ///
     /// # Errors
     ///
     /// Returns [`LengthExceeded`] if `s` exceeds `MAX` in encoding `E`.
