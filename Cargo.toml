@@ -8,5 +8,10 @@ rust-version = "1.91.0"
 repository = "https://github.com/Byunk/boundstr"
 readme = "README.md"
 
+[features]
+default = []
+serde = ["dep:serde_core"]
+
 [dependencies]
+serde_core = { version = "1", optional = true }
 str_indices = "0.4.4"

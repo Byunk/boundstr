@@ -129,6 +129,44 @@ impl<'a, const MAX: usize, E: Encoding> TryFrom<&'a str> for &'a BStr<MAX, E> {
     }
 }
 
+#[cfg(feature = "serde")]
+mod serde_impl {
+    use std::fmt;
+    use std::marker::PhantomData;
+
+    use serde_core::de::{self, Deserialize, Deserializer, Visitor};
+    use serde_core::ser::{Serialize, Serializer};
+
+    use super::BStr;
+    use crate::encoding::Encoding;
+
+    impl<const MAX: usize, E> Serialize for BStr<MAX, E> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(self)
+        }
+    }
+
+    struct BStrVisitor<const MAX: usize, E>(PhantomData<E>);
+
+    impl<'de, const MAX: usize, E: Encoding + 'de> Visitor<'de> for BStrVisitor<MAX, E> {
+        type Value = &'de BStr<MAX, E>;
+
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "a borrowed string of at most {MAX} in {}", E::default())
+        }
+
+        fn visit_borrowed_str<Err: de::Error>(self, v: &'de str) -> Result<Self::Value, Err> {
+            BStr::from_str(v).map_err(Err::custom)
+        }
+    }
+
+    impl<'de: 'a, 'a, const MAX: usize, E: Encoding + 'de> Deserialize<'de> for &'a BStr<MAX, E> {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_str(BStrVisitor::<MAX, E>(PhantomData))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::encoding::Utf16;
@@ -157,5 +195,24 @@ mod tests {
         assert_eq!(truncated::<4, Utf8>("a😀"), "a");
         // `MAX` falls between the two surrogates of '😀'.
         assert_eq!(truncated::<2, Utf16>("a😀b"), "a");
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn deserialize() {
+        use serde_core::de::Deserialize;
+        use serde_core::de::value::{BorrowedStrDeserializer, Error, StrDeserializer};
+
+        fn borrowed<const MAX: usize>(s: &str) -> Result<&BStr<MAX, Utf16>, Error> {
+            Deserialize::deserialize(BorrowedStrDeserializer::new(s))
+        }
+
+        assert_eq!(&**borrowed::<3>("a😀").unwrap(), "a😀");
+        assert!(borrowed::<2>("a😀").is_err());
+
+        // A string that does not outlive the deserializer cannot be borrowed.
+        let transient: Result<&BStr<3, Utf16>, Error> =
+            Deserialize::deserialize(StrDeserializer::new("a😀"));
+        assert!(transient.is_err());
     }
 }

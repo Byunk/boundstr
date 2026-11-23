@@ -486,6 +486,52 @@ impl<const MAX: usize, E: Encoding> FromStr for BString<MAX, E> {
     }
 }
 
+#[cfg(feature = "serde")]
+mod serde_impl {
+    use std::fmt;
+    use std::marker::PhantomData;
+
+    use serde_core::de::{self, Deserialize, Deserializer, Visitor};
+    use serde_core::ser::{Serialize, Serializer};
+
+    use crate::bstr::BStr;
+    use crate::encoding::Encoding;
+
+    use super::BString;
+
+    impl<const MAX: usize, E: Encoding> Serialize for BString<MAX, E> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(self.as_str())
+        }
+    }
+
+    struct BStringVisitor<const MAX: usize, E>(PhantomData<E>);
+
+    impl<const MAX: usize, E: Encoding> Visitor<'_> for BStringVisitor<MAX, E> {
+        type Value = BString<MAX, E>;
+
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "a string of at most {MAX} in {}", E::default())
+        }
+
+        fn visit_str<Err: de::Error>(self, v: &str) -> Result<Self::Value, Err> {
+            BStr::from_str(v)
+                .map(ToOwned::to_owned)
+                .map_err(Err::custom)
+        }
+
+        fn visit_string<Err: de::Error>(self, v: String) -> Result<Self::Value, Err> {
+            BString::from_string(v).map_err(Err::custom)
+        }
+    }
+
+    impl<'de, const MAX: usize, E: Encoding> Deserialize<'de> for BString<MAX, E> {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            deserializer.deserialize_string(BStringVisitor::<MAX, E>(PhantomData))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -603,5 +649,26 @@ mod tests {
         // '😀' is 4 bytes in UTF-8 but 2 code units in UTF-16.
         let err = bstring::<4, Utf8>("😀").rebound::<1, Utf16>().unwrap_err();
         assert_eq!((err.len, err.max), (2, 1));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn deserialize() {
+        use serde_core::de::Deserialize;
+        use serde_core::de::value::{Error, StrDeserializer, StringDeserializer};
+
+        fn copied<const MAX: usize>(s: &str) -> Result<BString<MAX, Utf16>, Error> {
+            Deserialize::deserialize(StrDeserializer::new(s))
+        }
+
+        fn owned<const MAX: usize>(s: &str) -> Result<BString<MAX, Utf16>, Error> {
+            Deserialize::deserialize(StringDeserializer::new(s.to_owned()))
+        }
+
+        assert_eq!(state(&copied::<4>("a😀").unwrap()), ("a😀", 1));
+        assert!(copied::<2>("a😀").is_err());
+
+        assert_eq!(state(&owned::<4>("a😀").unwrap()), ("a😀", 1));
+        assert!(owned::<2>("a😀").is_err());
     }
 }
