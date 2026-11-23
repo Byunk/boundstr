@@ -266,7 +266,7 @@ mod tests {
             Deserialize::deserialize(BorrowedStrDeserializer::new(s))
         }
 
-        assert_eq!(&**borrowed::<3>("a😀").unwrap(), "a😀");
+        assert_eq!(borrowed::<3>("a😀").unwrap(), "a😀");
         assert!(borrowed::<2>("a😀").is_err());
 
         // A string that does not outlive the deserializer cannot be borrowed.
