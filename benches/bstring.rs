@@ -161,5 +161,57 @@ fn remove(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, push, pop, remove);
+/// The number of characters inserted per iteration.
+///
+/// Kept small because inserting at the front shifts the rest of the string,
+/// which would otherwise dominate the measurement.
+const INSERTED: usize = 64;
+
+fn insert(c: &mut Criterion) {
+    for (name, chars) in inputs() {
+        let chars = &chars[..INSERTED];
+        let mut group = c.benchmark_group(format!("insert/{name}"));
+        group.throughput(Throughput::Elements(INSERTED as u64));
+
+        group.bench_function("String::insert", |b| {
+            b.iter_batched_ref(
+                || String::with_capacity(MAX),
+                |s| {
+                    for &ch in chars {
+                        s.insert(0, black_box(ch));
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf8>::try_insert", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf8>::with_capacity(MAX),
+                |s| {
+                    for &ch in chars {
+                        s.try_insert(0, black_box(ch)).unwrap();
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf16>::try_insert", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf16>::with_capacity(MAX),
+                |s| {
+                    for &ch in chars {
+                        s.try_insert(0, black_box(ch)).unwrap();
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.finish();
+    }
+}
+
+criterion_group!(benches, push, pop, remove, insert);
 criterion_main!(benches);

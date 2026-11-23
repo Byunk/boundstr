@@ -241,7 +241,17 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     /// Panics if `idx` is larger than the string's length in bytes, or if it
     /// does not lie on a char boundary.
     pub fn try_insert(&mut self, idx: usize, ch: char) -> Result<(), LengthExceeded<E>> {
-        self.try_insert_str(idx, ch.encode_utf8(&mut [0; 4]))
+        assert!(
+            self.s.is_char_boundary(idx),
+            "byte index {idx} is out of bounds or not a char boundary"
+        );
+        let added = E::len_char(ch);
+        if added > self.budget {
+            return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
+        }
+        self.s.insert(idx, ch);
+        self.budget -= added;
+        Ok(())
     }
 
     /// Inserts `s` at byte position `idx`.
