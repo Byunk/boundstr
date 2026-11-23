@@ -338,6 +338,18 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     pub fn into_string(self) -> String {
         self.s
     }
+
+    /// Converts this [`BString`] into a [`BString`] with a different maximum
+    /// length `N`, a different encoding `F`, or both.
+    ///
+    /// The string is reused without reallocating.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LengthExceeded`] if the string exceeds `N` in encoding `F`.
+    pub fn rebound<const N: usize, F: Encoding>(self) -> Result<BString<N, F>, LengthExceeded<F>> {
+        BString::from_string(self.s)
+    }
 }
 
 impl<const MAX: usize, E: Encoding> fmt::Debug for BString<MAX, E> {
@@ -573,5 +585,23 @@ mod tests {
         let mut s = bstring::<3, Utf16>("abc");
         assert_eq!(s.replace_range_truncated(1..2, "😀"), "😀");
         assert_eq!(state(&s), ("ac", 1));
+    }
+
+    #[test]
+    fn rebound() {
+        // A larger bound always fits.
+        let s = bstring::<3, Utf8>("aé").rebound::<5, Utf8>().unwrap();
+        assert_eq!(state(&s), ("aé", 2));
+
+        // 'é' is 2 bytes in UTF-8 but 1 code unit in UTF-16.
+        let s = bstring::<3, Utf8>("aé").rebound::<2, Utf16>().unwrap();
+        assert_eq!(state(&s), ("aé", 0));
+
+        let err = bstring::<3, Utf8>("aé").rebound::<2, Utf8>().unwrap_err();
+        assert_eq!((err.len, err.max), (3, 2));
+
+        // '😀' is 4 bytes in UTF-8 but 2 code units in UTF-16.
+        let err = bstring::<4, Utf8>("😀").rebound::<1, Utf16>().unwrap_err();
+        assert_eq!((err.len, err.max), (2, 1));
     }
 }
