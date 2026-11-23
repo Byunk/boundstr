@@ -40,3 +40,7 @@ assert_eq!(&**s, "Box: ");
 let s = BStr::<7, Utf16>::from_str_truncated("Box: 🐈");
 assert_eq!(&**s, "Box: 🐈");
 ```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
