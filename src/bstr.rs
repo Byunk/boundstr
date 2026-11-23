@@ -3,7 +3,8 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::ops::{Deref, Index};
+use std::slice::SliceIndex;
 
 use crate::encoding::{Encoding, Utf8};
 use crate::error::LengthExceeded;
@@ -43,6 +44,47 @@ impl<const MAX: usize, E: Encoding> BStr<MAX, E> {
     pub fn from_str_truncated(s: &str) -> &Self {
         let end = E::floor_char_boundary(s, MAX);
         Self::from_str_unchecked(&s[..end])
+    }
+
+    /// Returns a subslice of this [`BStr`], or [`None`] if indexing would
+    /// panic.
+    ///
+    /// See [`str::get`] for details.
+    #[inline]
+    pub fn get<I: SliceIndex<str, Output = str>>(&self, i: I) -> Option<&Self> {
+        self.s.get(i).map(Self::from_str_unchecked)
+    }
+
+    /// Divides this [`BStr`] into two at byte position `mid`.
+    ///
+    /// See [`str::split_at`] for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `mid` is larger than the string's length in bytes, or if it
+    /// does not lie on a char boundary.
+    #[inline]
+    #[must_use]
+    pub fn split_at(&self, mid: usize) -> (&Self, &Self) {
+        let (first, last) = self.s.split_at(mid);
+        (
+            Self::from_str_unchecked(first),
+            Self::from_str_unchecked(last),
+        )
+    }
+
+    /// Divides this [`BStr`] into two at byte position `mid`, or returns
+    /// [`None`] if splitting would panic.
+    ///
+    /// See [`str::split_at_checked`] for details.
+    #[inline]
+    #[must_use]
+    pub fn split_at_checked(&self, mid: usize) -> Option<(&Self, &Self)> {
+        let (first, last) = self.s.split_at_checked(mid)?;
+        Some((
+            Self::from_str_unchecked(first),
+            Self::from_str_unchecked(last),
+        ))
     }
 
     /// Converts a `&str` to a [`BStr`], without checking its length.
@@ -104,6 +146,18 @@ impl<const MAX: usize, E> Deref for BStr<MAX, E> {
 
     fn deref(&self) -> &str {
         &self.s
+    }
+}
+
+impl<const MAX: usize, E: Encoding, I> Index<I> for BStr<MAX, E>
+where
+    I: SliceIndex<str, Output = str>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn index(&self, index: I) -> &Self {
+        Self::from_str_unchecked(&self.s[index])
     }
 }
 
