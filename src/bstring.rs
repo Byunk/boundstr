@@ -566,7 +566,15 @@ impl<const MAX: usize, E: Encoding> TryFrom<&str> for BString<MAX, E> {
     type Error = LengthExceeded<E>;
 
     fn try_from(s: &str) -> Result<Self, LengthExceeded<E>> {
-        BStr::from_str(s).map(ToOwned::to_owned)
+        let len = E::len(s);
+        if len > MAX {
+            return Err(LengthExceeded::new(len, MAX));
+        }
+        Ok(Self {
+            s: s.to_owned(),
+            budget: MAX - len,
+            phantom: PhantomData,
+        })
     }
 }
 
@@ -574,7 +582,7 @@ impl<const MAX: usize, E: Encoding> FromStr for BString<MAX, E> {
     type Err = LengthExceeded<E>;
 
     fn from_str(s: &str) -> Result<Self, LengthExceeded<E>> {
-        BStr::from_str(s).map(ToOwned::to_owned)
+        Self::try_from(s)
     }
 }
 
@@ -586,7 +594,6 @@ mod serde_impl {
     use serde_core::de::{self, Deserialize, Deserializer, Visitor};
     use serde_core::ser::{Serialize, Serializer};
 
-    use crate::bstr::BStr;
     use crate::encoding::Encoding;
 
     use super::BString;
@@ -607,9 +614,7 @@ mod serde_impl {
         }
 
         fn visit_str<Err: de::Error>(self, v: &str) -> Result<Self::Value, Err> {
-            BStr::from_str(v)
-                .map(ToOwned::to_owned)
-                .map_err(Err::custom)
+            BString::try_from(v).map_err(Err::custom)
         }
 
         fn visit_string<Err: de::Error>(self, v: String) -> Result<Self::Value, Err> {
