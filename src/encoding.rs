@@ -10,6 +10,16 @@ pub trait Encoding: Sized + Default + fmt::Debug + fmt::Display {
 
     /// Finds the closest character boundary `x` not exceeding `index`.
     fn floor_char_boundary(s: &str, index: usize) -> usize;
+
+    /// Returns `true` if the length of `s` is less than or equal to `max` in
+    /// this encoding.
+    ///
+    /// This is derived from `Self::len(s) <= max` by default, but some
+    /// encodings may have a faster implementation.
+    #[inline]
+    fn fits(s: &str, max: usize) -> bool {
+        s.len() <= max
+    }
 }
 
 /// UTF-8 encoding.
@@ -63,5 +73,21 @@ impl Encoding for Utf16 {
     #[inline]
     fn floor_char_boundary(s: &str, index: usize) -> usize {
         str_indices::utf16::to_byte_idx(s, index)
+    }
+
+    #[inline]
+    fn fits(s: &str, max: usize) -> bool {
+        let bytes = s.len();
+        // Optimization: The number of UTF-16 code units is always less than the
+        // byte length in UTF-8.
+        if bytes <= max {
+            return true;
+        }
+        // Optimization: A UTF-16 code unit is at most 3 bytes in UTF-8,
+        // so it cannot exceed `3 * max` bytes in UTF-8.
+        if bytes > max.saturating_mul(3) {
+            return false;
+        }
+        Self::len(s) <= max
     }
 }
