@@ -1,5 +1,7 @@
+use std::fmt;
+
 /// A character encoding.
-pub trait Encoding {
+pub trait Encoding: Sized + Default + fmt::Debug + fmt::Display {
     /// Returns the length of `s` in this encoding.
     fn len(s: &str) -> usize;
 
@@ -10,6 +12,12 @@ pub trait Encoding {
 /// UTF-8 encoding.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Utf8;
+
+impl fmt::Display for Utf8 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("UTF-8")
+    }
+}
 
 impl Encoding for Utf8 {
     #[inline]
@@ -26,6 +34,12 @@ impl Encoding for Utf8 {
 /// UTF-16 encoding.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Utf16;
+
+impl fmt::Display for Utf16 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("UTF-16")
+    }
+}
 
 impl Encoding for Utf16 {
     #[inline]
