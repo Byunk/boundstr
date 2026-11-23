@@ -79,7 +79,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     pub fn from_string(s: String) -> Result<Self, LengthExceeded<E>> {
         let len = E::len(&s);
         if len > MAX {
-            return Err(LengthExceeded::new(len, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         Ok(Self {
             s,
@@ -198,7 +198,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     pub fn try_push(&mut self, ch: char) -> Result<(), LengthExceeded<E>> {
         let added = E::len_char(ch);
         if added > self.budget {
-            return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         self.s.push(ch);
         self.budget -= added;
@@ -247,7 +247,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
         );
         let added = E::len_char(ch);
         if added > self.budget {
-            return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         self.s.insert(idx, ch);
         self.budget -= added;
@@ -272,7 +272,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
         );
         let added = E::len(s);
         if added > self.budget {
-            return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         self.s.insert_str(idx, s);
         self.budget -= added;
@@ -322,7 +322,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
         let added = E::len(with);
         let room = self.budget + removed;
         if added > room {
-            return Err(LengthExceeded::new(MAX - room + added, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         self.s.replace_range(range, with);
         self.budget = room - added;
@@ -600,7 +600,7 @@ impl<const MAX: usize, E: Encoding> TryFrom<&str> for BString<MAX, E> {
     fn try_from(s: &str) -> Result<Self, LengthExceeded<E>> {
         let len = E::len(s);
         if len > MAX {
-            return Err(LengthExceeded::new(len, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         Ok(Self {
             s: s.to_owned(),
@@ -794,11 +794,11 @@ mod tests {
         assert_eq!(state(&s), ("aé", 0));
 
         let err = bstring::<3, Utf8>("aé").rebound::<2, Utf8>().unwrap_err();
-        assert_eq!((err.len, err.max), (3, 2));
+        assert_eq!(err.max, 2);
 
         // '😀' is 4 bytes in UTF-8 but 2 code units in UTF-16.
         let err = bstring::<4, Utf8>("😀").rebound::<1, Utf16>().unwrap_err();
-        assert_eq!((err.len, err.max), (2, 1));
+        assert_eq!(err.max, 1);
     }
 
     #[cfg(feature = "serde")]

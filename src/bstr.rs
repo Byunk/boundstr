@@ -28,7 +28,7 @@ impl<const MAX: usize, E: Encoding> BStr<MAX, E> {
     pub fn from_str(s: &str) -> Result<&Self, LengthExceeded<E>> {
         let len = E::len(s);
         if len > MAX {
-            return Err(LengthExceeded::new(len, MAX));
+            return Err(LengthExceeded::new(MAX));
         }
         Ok(Self::from_str_unchecked(s))
     }
