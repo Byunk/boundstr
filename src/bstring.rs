@@ -239,6 +239,10 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     /// Panics if `idx` is larger than the string's length in bytes, or if it
     /// does not lie on a char boundary.
     pub fn try_insert_str(&mut self, idx: usize, s: &str) -> Result<(), LengthExceeded<E>> {
+        assert!(
+            self.s.is_char_boundary(idx),
+            "byte index {idx} is out of bounds or not a char boundary"
+        );
         let added = E::len(s);
         if added > self.budget {
             return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
@@ -652,6 +656,13 @@ mod tests {
         assert_eq!(state(&truncated::<2, Utf8>("aé")), ("a", 1));
         // `MAX` falls between the two surrogates of '😀'.
         assert_eq!(state(&truncated::<2, Utf16>("a😀b")), ("a", 1));
+    }
+
+    #[test]
+    #[should_panic(expected = "not a char boundary")]
+    fn try_insert_str_panics_on_invalid_idx_even_if_too_long() {
+        // Index 2 is inside the 2-byte 'é', and "xyz" does not fit.
+        let _ = bstring::<3, Utf8>("aé").try_insert_str(2, "xyz");
     }
 
     #[test]
