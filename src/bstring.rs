@@ -439,8 +439,18 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     where
         F: FnMut(char) -> bool,
     {
-        self.s.retain(f);
-        self.budget = MAX - E::len(&self.s);
+        /// Recounts the budget on drop, so that it stays exact even if `f`
+        /// panic.
+        struct Recount<'a, const MAX: usize, E: Encoding>(&'a mut BString<MAX, E>);
+
+        impl<const MAX: usize, E: Encoding> Drop for Recount<'_, MAX, E> {
+            fn drop(&mut self) {
+                self.0.budget = MAX - E::len(&self.0.s);
+            }
+        }
+
+        let recount = Recount(self);
+        recount.0.s.retain(f);
     }
 
     /// Returns a [`BStr`] slice of the entire string.
@@ -781,6 +791,27 @@ mod tests {
         let mut s = bstring::<3, Utf16>("abc");
         assert_eq!(s.replace_range_truncated(1..2, "😀"), "😀");
         assert_eq!(state(&s), ("ac", 1));
+    }
+
+    #[test]
+    fn retain_keeps_budget_exact_if_predicate_panics() {
+        use std::panic::{AssertUnwindSafe, catch_unwind};
+
+        // '😀' is 2 code units in UTF-16, so the string starts full.
+        let mut s = bstring::<6, Utf16>("a😀b😀");
+        assert_eq!(state(&s), ("a😀b😀", 0));
+
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            s.retain(|ch| match ch {
+                'b' => panic!("predicate panicked"),
+                ch => ch == 'a',
+            });
+        }));
+        assert!(result.is_err());
+
+        // Whatever `String::retain` left behind, the budget must match it.
+        assert_eq!(s.budget, 6 - Utf16::len(s.as_str()));
+        assert_ne!(s.budget, 0);
     }
 
     #[test]
