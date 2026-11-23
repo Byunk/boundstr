@@ -87,6 +87,33 @@ impl<const MAX: usize, E: Encoding> BStr<MAX, E> {
         ))
     }
 
+    /// Returns this [`BStr`] with leading and trailing whitespace removed.
+    ///
+    /// See [`str::trim`] for details.
+    #[inline]
+    #[must_use]
+    pub fn trim(&self) -> &Self {
+        Self::from_str_unchecked(self.s.trim())
+    }
+
+    /// Returns this [`BStr`] with leading whitespace removed.
+    ///
+    /// See [`str::trim_start`] for details.
+    #[inline]
+    #[must_use]
+    pub fn trim_start(&self) -> &Self {
+        Self::from_str_unchecked(self.s.trim_start())
+    }
+
+    /// Returns this [`BStr`] with trailing whitespace removed.
+    ///
+    /// See [`str::trim_end`] for details.
+    #[inline]
+    #[must_use]
+    pub fn trim_end(&self) -> &Self {
+        Self::from_str_unchecked(self.s.trim_end())
+    }
+
     /// Converts a `&str` to a [`BStr`], without checking its length.
     ///
     /// It's for internal use only, and the caller must ensure that `s` does not
