@@ -471,6 +471,11 @@ impl<const MAX: usize, E> Clone for BString<MAX, E> {
             phantom: PhantomData,
         }
     }
+
+    fn clone_from(&mut self, source: &Self) {
+        self.s.clone_from(&source.s);
+        self.budget = source.budget;
+    }
 }
 
 impl<const MAX: usize, E> PartialEq for BString<MAX, E> {
