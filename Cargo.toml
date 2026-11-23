@@ -1,6 +1,6 @@
 [package]
 name = "boundstr"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Kyungho Byoun <kyungho.byoun@gmail.com>"]
 description = "A string type for Rust whose length is guaranteed to be within bounds."
 edition = "2024"
