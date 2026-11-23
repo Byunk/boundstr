@@ -18,5 +18,12 @@ serde = ["dep:serde_core"]
 serde_core = { version = "1", optional = true }
 str_indices = "0.4.4"
 
+[dev-dependencies]
+criterion = "0.8"
+
 [package.metadata.docs.rs]
 all-features = true
+
+[[bench]]
+name = "bstring"
+harness = false
