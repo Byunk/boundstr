@@ -115,6 +115,16 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
         self.s.capacity()
     }
 
+    /// Returns the length, in encoding `E`.
+    pub const fn encoded_len(&self) -> usize {
+        MAX - self.budget
+    }
+
+    /// Returns the remaining room before `MAX`, in encoding `E`.
+    pub const fn remaining(&self) -> usize {
+        self.budget
+    }
+
     /// Reserves capacity for at least `additional` bytes more than the current
     /// length.
     ///
