@@ -12,7 +12,7 @@ use crate::encoding::{Encoding, Utf8};
 use crate::error::{FromUtf8Error, FromUtf16Error, LengthExceeded};
 
 /// A bounded [`String`] whose length is at most `MAX` in encoding `E`.
-pub struct BString<const MAX: usize, E: Encoding = Utf8> {
+pub struct BString<const MAX: usize, E = Utf8> {
     s: String,
     /// The remaining budget for the string length, in encoding `E`.
     budget: usize,
@@ -445,13 +445,13 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> fmt::Debug for BString<MAX, E> {
+impl<const MAX: usize, E> fmt::Debug for BString<MAX, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.s, f)
     }
 }
 
-impl<const MAX: usize, E: Encoding> fmt::Display for BString<MAX, E> {
+impl<const MAX: usize, E> fmt::Display for BString<MAX, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.s, f)
     }
@@ -463,7 +463,7 @@ impl<const MAX: usize, E: Encoding> Default for BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> Clone for BString<MAX, E> {
+impl<const MAX: usize, E> Clone for BString<MAX, E> {
     fn clone(&self) -> Self {
         Self {
             s: self.s.clone(),
@@ -473,27 +473,27 @@ impl<const MAX: usize, E: Encoding> Clone for BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> PartialEq for BString<MAX, E> {
+impl<const MAX: usize, E> PartialEq for BString<MAX, E> {
     fn eq(&self, other: &Self) -> bool {
         self.s == other.s
     }
 }
 
-impl<const MAX: usize, E: Encoding> Eq for BString<MAX, E> {}
+impl<const MAX: usize, E> Eq for BString<MAX, E> {}
 
-impl<const MAX: usize, E: Encoding> PartialOrd for BString<MAX, E> {
+impl<const MAX: usize, E> PartialOrd for BString<MAX, E> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<const MAX: usize, E: Encoding> Ord for BString<MAX, E> {
+impl<const MAX: usize, E> Ord for BString<MAX, E> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.s.cmp(&other.s)
     }
 }
 
-impl<const MAX: usize, E: Encoding> Hash for BString<MAX, E> {
+impl<const MAX: usize, E> Hash for BString<MAX, E> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.s.hash(state);
     }
@@ -513,9 +513,9 @@ impl<const MAX: usize, E: Encoding> AsRef<BStr<MAX, E>> for BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> AsRef<str> for BString<MAX, E> {
+impl<const MAX: usize, E> AsRef<str> for BString<MAX, E> {
     fn as_ref(&self) -> &str {
-        self.as_str()
+        &self.s
     }
 }
 
@@ -525,9 +525,9 @@ impl<const MAX: usize, E: Encoding> Borrow<BStr<MAX, E>> for BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> Borrow<str> for BString<MAX, E> {
+impl<const MAX: usize, E> Borrow<str> for BString<MAX, E> {
     fn borrow(&self) -> &str {
-        self.as_str()
+        &self.s
     }
 }
 
@@ -549,7 +549,7 @@ impl<const MAX: usize, E: Encoding> From<&BStr<MAX, E>> for BString<MAX, E> {
     }
 }
 
-impl<const MAX: usize, E: Encoding> From<BString<MAX, E>> for String {
+impl<const MAX: usize, E> From<BString<MAX, E>> for String {
     fn from(s: BString<MAX, E>) -> Self {
         s.s
     }
@@ -599,9 +599,9 @@ mod serde_impl {
 
     use super::BString;
 
-    impl<const MAX: usize, E: Encoding> Serialize for BString<MAX, E> {
+    impl<const MAX: usize, E> Serialize for BString<MAX, E> {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(self.as_str())
+            serializer.serialize_str(&self.s)
         }
     }
 
