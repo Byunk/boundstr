@@ -6,7 +6,7 @@ use boundstr::BString;
 use boundstr::encoding::{Utf8, Utf16};
 use criterion::{BatchSize, Criterion, Throughput, criterion_group, criterion_main};
 
-/// The number of characters pushed per iteration.
+/// The number of characters pushed or popped per iteration.
 const CHARS: usize = 4096;
 /// Large enough that no push is ever rejected, in either encoding.
 const MAX: usize = CHARS * 4;
@@ -63,5 +63,103 @@ fn push(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, push);
+fn pop(c: &mut Criterion) {
+    for (name, chars) in inputs() {
+        let full: String = chars.iter().collect();
+        let mut group = c.benchmark_group(format!("pop/{name}"));
+        group.throughput(Throughput::Elements(CHARS as u64));
+
+        group.bench_function("String::pop", |b| {
+            b.iter_batched_ref(
+                || full.clone(),
+                |s| {
+                    while let Some(ch) = s.pop() {
+                        black_box(ch);
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf8>::pop", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf8>::try_from(full.as_str()).unwrap(),
+                |s| {
+                    while let Some(ch) = s.pop() {
+                        black_box(ch);
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf16>::pop", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf16>::try_from(full.as_str()).unwrap(),
+                |s| {
+                    while let Some(ch) = s.pop() {
+                        black_box(ch);
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.finish();
+    }
+}
+
+/// The number of characters removed per iteration.
+///
+/// Kept small because removing from the front shifts the rest of the string,
+/// which would otherwise dominate the measurement.
+const REMOVED: usize = 64;
+
+fn remove(c: &mut Criterion) {
+    for (name, chars) in inputs() {
+        let full: String = chars.iter().take(REMOVED).collect();
+        let mut group = c.benchmark_group(format!("remove/{name}"));
+        group.throughput(Throughput::Elements(REMOVED as u64));
+
+        group.bench_function("String::remove", |b| {
+            b.iter_batched_ref(
+                || full.clone(),
+                |s| {
+                    while !s.is_empty() {
+                        black_box(s.remove(0));
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf8>::remove", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf8>::try_from(full.as_str()).unwrap(),
+                |s| {
+                    while !s.is_empty() {
+                        black_box(s.remove(0));
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.bench_function("BString<Utf16>::remove", |b| {
+            b.iter_batched_ref(
+                || BString::<MAX, Utf16>::try_from(full.as_str()).unwrap(),
+                |s| {
+                    while !s.is_empty() {
+                        black_box(s.remove(0));
+                    }
+                },
+                BatchSize::SmallInput,
+            );
+        });
+
+        group.finish();
+    }
+}
+
+criterion_group!(benches, push, pop, remove);
 criterion_main!(benches);
