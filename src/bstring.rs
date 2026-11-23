@@ -376,7 +376,7 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     /// or if it does not lie on a char boundary.
     pub fn remove(&mut self, idx: usize) -> char {
         let ch = self.s.remove(idx);
-        self.budget += E::len(ch.encode_utf8(&mut [0; 4]));
+        self.budget += E::len_char(ch);
         ch
     }
 
