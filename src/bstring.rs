@@ -597,7 +597,7 @@ mod serde_impl {
     use std::fmt;
     use std::marker::PhantomData;
 
-    use serde_core::de::{self, Deserialize, Deserializer, Visitor};
+    use serde_core::de::{self, Deserialize, Deserializer, Unexpected, Visitor};
     use serde_core::ser::{Serialize, Serializer};
 
     use crate::encoding::Encoding;
@@ -625,6 +625,20 @@ mod serde_impl {
 
         fn visit_string<Err: de::Error>(self, v: String) -> Result<Self::Value, Err> {
             BString::from_string(v).map_err(Err::custom)
+        }
+
+        fn visit_bytes<Err: de::Error>(self, v: &[u8]) -> Result<Self::Value, Err> {
+            match str::from_utf8(v) {
+                Ok(s) => self.visit_str(s),
+                Err(_) => Err(Err::invalid_value(Unexpected::Bytes(v), &self)),
+            }
+        }
+
+        fn visit_byte_buf<Err: de::Error>(self, v: Vec<u8>) -> Result<Self::Value, Err> {
+            match String::from_utf8(v) {
+                Ok(s) => self.visit_string(s),
+                Err(e) => Err(Err::invalid_value(Unexpected::Bytes(e.as_bytes()), &self)),
+            }
         }
     }
 
