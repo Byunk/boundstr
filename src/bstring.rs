@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
+use std::collections::TryReserveError;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -26,6 +27,22 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     pub const fn new() -> Self {
         Self {
             s: String::new(),
+            budget: MAX,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Creates a new empty [`BString`] with at least the specified capacity, in
+    /// bytes.
+    ///
+    /// See [`String::with_capacity`] for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the capacity exceeds `isize::MAX` _bytes_.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            s: String::with_capacity(capacity),
             budget: MAX,
             phantom: PhantomData,
         }
@@ -88,6 +105,77 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
             budget: MAX - len,
             phantom: PhantomData,
         }
+    }
+
+    /// Returns this [`BString`]'s capacity, in bytes.
+    ///
+    /// See [`String::capacity`] for details.
+    pub const fn capacity(&self) -> usize {
+        self.s.capacity()
+    }
+
+    /// Reserves capacity for at least `additional` bytes more than the current
+    /// length.
+    ///
+    /// See [`String::reserve`] for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` _bytes_.
+    pub fn reserve(&mut self, additional: usize) {
+        self.s.reserve(additional);
+    }
+
+    /// Reserves the minimum capacity for at least `additional` bytes more than
+    /// the current length.
+    ///
+    /// See [`String::reserve_exact`] for details.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` _bytes_.
+    pub fn reserve_exact(&mut self, additional: usize) {
+        self.s.reserve_exact(additional);
+    }
+
+    /// Tries to reserve capacity for at least `additional` bytes more than the
+    /// current length.
+    ///
+    /// See [`String::try_reserve`] for details.
+    ///
+    /// # Errors
+    ///
+    /// If the capacity overflows, or the allocator reports a failure, then an
+    /// error is returned.
+    pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
+        self.s.try_reserve(additional)
+    }
+
+    /// Tries to reserve the minimum capacity for at least `additional` bytes
+    /// more than the current length.
+    ///
+    /// See [`String::try_reserve_exact`] for details.
+    ///
+    /// # Errors
+    ///
+    /// If the capacity overflows, or the allocator reports a failure, then an
+    /// error is returned.
+    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), TryReserveError> {
+        self.s.try_reserve_exact(additional)
+    }
+
+    /// Shrinks the capacity of this [`BString`] to match its length.
+    ///
+    /// See [`String::shrink_to_fit`] for details.
+    pub fn shrink_to_fit(&mut self) {
+        self.s.shrink_to_fit();
+    }
+
+    /// Shrinks the capacity of this [`BString`] with a lower bound, in bytes.
+    ///
+    /// See [`String::shrink_to`] for details.
+    pub fn shrink_to(&mut self, min_capacity: usize) {
+        self.s.shrink_to(min_capacity);
     }
 
     /// Appends `ch` to the end of this [`BString`].
