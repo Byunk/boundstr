@@ -196,7 +196,13 @@ impl<const MAX: usize, E: Encoding> BString<MAX, E> {
     /// Returns [`LengthExceeded`] if `ch` would make the string exceed `MAX` in
     /// encoding `E`.
     pub fn try_push(&mut self, ch: char) -> Result<(), LengthExceeded<E>> {
-        self.try_insert(self.s.len(), ch)
+        let added = E::len_char(ch);
+        if added > self.budget {
+            return Err(LengthExceeded::new(MAX - self.budget + added, MAX));
+        }
+        self.s.push(ch);
+        self.budget -= added;
+        Ok(())
     }
 
     /// Appends `s` to the end of this [`BString`].

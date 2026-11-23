@@ -5,6 +5,9 @@ pub trait Encoding: Sized + Default + fmt::Debug + fmt::Display {
     /// Returns the length of `s` in this encoding.
     fn len(s: &str) -> usize;
 
+    /// Returns the length of `ch` in this encoding.
+    fn len_char(ch: char) -> usize;
+
     /// Finds the closest character boundary `x` not exceeding `index`.
     fn floor_char_boundary(s: &str, index: usize) -> usize;
 }
@@ -23,6 +26,11 @@ impl Encoding for Utf8 {
     #[inline]
     fn len(s: &str) -> usize {
         s.len()
+    }
+
+    #[inline]
+    fn len_char(ch: char) -> usize {
+        ch.len_utf8()
     }
 
     #[inline]
@@ -45,6 +53,11 @@ impl Encoding for Utf16 {
     #[inline]
     fn len(s: &str) -> usize {
         str_indices::utf16::count(s)
+    }
+
+    #[inline]
+    fn len_char(ch: char) -> usize {
+        ch.len_utf16()
     }
 
     #[inline]
