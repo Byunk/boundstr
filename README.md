@@ -2,6 +2,9 @@
 
 A string type for Rust whose length is guaranteed to be within bounds.
 
+[![crates.io](https://img.shields.io/crates/v/boundstr.svg)](https://crates.io/crates/boundstr)
+[![docs.rs](https://img.shields.io/docsrs/boundstr)](https://docs.rs/boundstr)
+
 ## Example
 
 ```rust
